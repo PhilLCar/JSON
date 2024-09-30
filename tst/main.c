@@ -2,6 +2,7 @@
 
 #include <diagnostic.h>
 #include <json.h>
+#include <oop.h>
 
 int main(void)
 {
