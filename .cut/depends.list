@@ -1,0 +1,8 @@
+json.h:
+    -I/home/phil/Program/Utilities/Diagnostic/inc
+    -I/home/phil/Program/Utilities/OOP/inc
+    -I/home/phil/Program/Utilities/Collection/inc
+packages:
+    /home/phil/Program/Utilities/Diagnostic
+    /home/phil/Program/Utilities/OOP
+    /home/phil/Program/Utilities/Collection
