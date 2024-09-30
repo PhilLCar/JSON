@@ -1,2 +1,2 @@
-# Json (CUT)
-Json serializer and deserializer for CUT
+# JSON (CUT)
+JSON serializer and deserializer for CUT
