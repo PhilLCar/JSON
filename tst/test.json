@@ -1,0 +1,16 @@
+{
+  "Object-test" : {
+    "List-test" : [
+      {},
+      "allo",
+      50.3,
+      [
+        1,
+        2,
+        3
+      ]
+    ]
+  },
+  "String-test" : "test",
+  "Number-test" : 20.1
+}

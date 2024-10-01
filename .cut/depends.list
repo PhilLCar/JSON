@@ -2,7 +2,11 @@ json.h:
     -I/home/phil/Program/Utilities/Diagnostic/inc
     -I/home/phil/Program/Utilities/OOP/inc
     -I/home/phil/Program/Utilities/Collection/inc
+    -I/home/phil/Program/Utilities/Stream/inc
+    -I/home/phil/Program/Utilities/String/inc
 packages:
     /home/phil/Program/Utilities/Diagnostic
     /home/phil/Program/Utilities/OOP
     /home/phil/Program/Utilities/Collection
+    /home/phil/Program/Utilities/Stream
+    /home/phil/Program/Utilities/String

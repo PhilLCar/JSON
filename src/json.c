@@ -7,7 +7,7 @@ OBJECTIFY(double);
 /******************************************************************************/
 void STATIC (except) (const char *message)
 {
-  fprintf("%s\n", message);
+  fprintf(stderr, "%s\n", message);
   exit(-1);
 }
 
@@ -16,13 +16,13 @@ char STATIC (skipws)(CharStream *stream)
 {
   char c;
 
-  while ((c = speek(stream)) != EOF) {
+  while ((c = CharStream_peek(stream)) != EOF) {
     switch (c) {
       case '\n':
       case '\r':
       case ' ':
       case '\t':
-        sgetc(stream);
+        CharStream_get(stream);
         continue;
       default:
         break;
@@ -34,7 +34,7 @@ char STATIC (skipws)(CharStream *stream)
 }
 
 /******************************************************************************/
-char STATIC (indent)(CharStream *stream, int indent)
+void STATIC (indent)(CharStream *stream, int indent)
 {
   for (int i = 0; i < indent << 1; i++) {
     CharStream_put(stream, ' ');
@@ -61,104 +61,7 @@ void _(free)()
 }
 
 /******************************************************************************/
-void *STATIC (any)(CharStream *stream)
-{
-  char c = JSON_skipws(stream);
-
-  switch (c) {
-    case '{':
-      return JSON_dictionary(stream);
-    case '[':
-      return JSON_list(stream);
-    case '"':
-      return JSON_text(stream);
-    default:
-      return JSON_number(stream);
-  }
-}
-
-/******************************************************************************/
-Map *STATIC (dictionary)(CharStream *stream)
-{
-  Map *dictionary = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cequals);
-
-  char c = JSON_skipws(stream);
-
-  if (c == '{') {
-    sgetc(stream);
-
-    while ((c = JSON_skipws(stream)) != EOF) {
-      if (c == '}') break;
-
-      String *key = JSON_text(stream);
-
-      if (JSON_skipws(stream) == ':') {
-        sgetc(stream);
-      } else {
-        char error[256];
-        sprintf("Expecting ':' after key '%s'!", key->base);
-        JSON_except(error);
-      }
-
-      void *value = JSON_any(stream);
-
-      Map_setkey(dictionary, key, &value);
-
-      if ((c = JSON_skipws(stream)) == ',') {
-        sgetc(stream);
-      } else break;
-    }
-
-    if (sgetc(stream) != '}') {
-      JSON_except("Expecting '}' at the end of a dictonary (look for a missing ',').");
-    }
-
-  } else {
-    JSON_except("Expecting '{' at the begining of a dictonary.");
-  }
-
-  if (c == EOF) {
-    JSON_except("Reached EOF before deserialization was over!");
-  }
-
-  return dictionary;
-}
-
-/******************************************************************************/
-Array *STATIC (list)(CharStream *stream)
-{
-  Array *list = NEW (Array) (sizeof(void*));
-
-  char c = JSON_skipws(stream);
-
-  if (c == '[') {
-    sgetc(stream);
-
-    while ((c = JSON_skipws(stream)) != EOF) {
-      if (c == ']') break;
-
-      void *value = JSON_any(stream);
-
-      Array_push(list, &value);
-
-      if ((c = JSON_skipws(stream)) == ',') {
-        sgetc(stream);
-      } else break;
-    }
-
-    if (sgetc(stream) != ']') {
-      JSON_except("Expecting ']' at the end of a list (look for a missing ',').");
-    }
-  } else {
-    JSON_except("Expecting '[' at the begining of a list.");
-  }
-  
-  if (c == EOF) {
-    JSON_except("Reached EOF before deserialization was over!");
-  }
-
-  return list;
-}
+void *STATIC (any)(CharStream*);
 
 /******************************************************************************/
 String *STATIC (text)(CharStream *stream)
@@ -167,15 +70,12 @@ String *STATIC (text)(CharStream *stream)
   char c = JSON_skipws(stream);
 
   if (c == '"') {
-    sgetc(stream);
+    CharStream_get(stream);
 
-    while ((c = sgetc(stream)) != EOF) {
+    while ((c = CharStream_read(stream)) != EOF) {
       switch (c) {
         case '"':
           break;
-        case '\\':
-          String_append(text, sesc(stream));
-          continue;
         default:
           String_append(text, c);
           continue;
@@ -203,9 +103,9 @@ double *STATIC (number)(CharStream *stream)
   JSON_skipws(stream);
 
   // For now numbers are going to be decimal floating points only
-  while ((c = speek(stream)) != EOF) {
+  while ((c = CharStream_peek(stream)) != EOF) {
     if ((c >= '0' && c <= '9') || c == '.') {
-      String_append(digits, sgetc(stream));
+      String_append(digits, CharStream_read(stream));
     } else break;
   }
 
@@ -220,35 +120,137 @@ double *STATIC (number)(CharStream *stream)
   return number;
 }
 
+/******************************************************************************/
+Map *STATIC (dictionary)(CharStream *stream)
+{
+  Map *dictionary = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cequals);
+
+  char c = JSON_skipws(stream);
+
+  if (c == '{') {
+    CharStream_get(stream);
+
+    while ((c = JSON_skipws(stream)) != EOF) {
+      if (c == '}') break;
+
+      String *key = JSON_text(stream);
+
+      if (JSON_skipws(stream) == ':') {
+        CharStream_get(stream);
+      } else {
+        char error[256];
+        sprintf(error, "Expecting ':' after key '%s'!", key->base);
+        JSON_except(error);
+      }
+
+      void *value = JSON_any(stream);
+
+      Map_setkey(dictionary, key, &value);
+
+      if ((c = JSON_skipws(stream)) == ',') {
+        CharStream_get(stream);
+      } else break;
+    }
+
+    if (CharStream_get(stream) != '}') {
+      JSON_except("Expecting '}' at the end of a dictonary (look for a missing ',').");
+    }
+
+  } else {
+    JSON_except("Expecting '{' at the begining of a dictonary.");
+  }
+
+  if (c == EOF) {
+    JSON_except("Reached EOF before deserialization was over!");
+  }
+
+  return dictionary;
+}
+
+/******************************************************************************/
+Array *STATIC (list)(CharStream *stream)
+{
+  Array *list = NEW (Array) (sizeof(void*));
+
+  char c = JSON_skipws(stream);
+
+  if (c == '[') {
+    CharStream_get(stream);
+
+    while ((c = JSON_skipws(stream)) != EOF) {
+      if (c == ']') break;
+
+      void *value = JSON_any(stream);
+
+      Array_push(list, &value);
+
+      if ((c = JSON_skipws(stream)) == ',') {
+        CharStream_get(stream);
+      } else break;
+    }
+
+    if (CharStream_get(stream) != ']') {
+      JSON_except("Expecting ']' at the end of a list (look for a missing ',').");
+    }
+  } else {
+    JSON_except("Expecting '[' at the begining of a list.");
+  }
+  
+  if (c == EOF) {
+    JSON_except("Reached EOF before deserialization was over!");
+  }
+
+  return list;
+}
+
+/******************************************************************************/
+void *STATIC (any)(CharStream *stream)
+{
+  char c = JSON_skipws(stream);
+
+  switch (c) {
+    case '{':
+      return JSON_dictionary(stream);
+    case '[':
+      return JSON_list(stream);
+    case '"':
+      return JSON_text(stream);
+    default:
+      return JSON_number(stream);
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 void _(deserialize)(CharStream *stream)
 {
   Map *json = JSON_dictionary(stream);
 
-  if (JSON_skipws(stream) == EOF && json != NULL) {
+  if (json != NULL) {
     JSON_free(this);
     memcpy(BASE(0), json, sizeof(Map));
     tfree(json);
-  } else {
-    JSON_except("Garbage left after object was fully parsed.");
-    DELETE (json);
   }
 }
 
 /******************************************************************************/
-void *STATIC (write)(void *object, CharStream *stream, int indent)
-{
-  Type *type = gettype(object);
+void STATIC (write)(void*, CharStream*, int);
 
-  if (sametype(type, &OBJECT_TYPE(Map))) {
-    JSON_write_dictionary(object, stream, indent);
-  } else if (sametype(type, &OBJECT_TYPE(Array))) {
-    JSON_write_list(object, stream, indent);
-  } else if (sametype(type, &OBJECT_TYPE(String))) {
-    JSON_write_text(object, stream);
-  } else if (sametype(type, &OBJECT_TYPE(double))) {
-    JSON_write_number(object, stream);
-  }
+/******************************************************************************/
+void STATIC (write_text)(String *object, CharStream *stream)
+{
+  CharStream_put(stream, '"');
+  CharStream_putstr(stream, object->base);
+  CharStream_put(stream, '"');
+}
+
+/******************************************************************************/
+void STATIC (write_number)(double *object, CharStream *stream)
+{
+  char buffer[256];
+
+  sprintf(buffer, "%f", *object);
+
+  CharStream_putstr(stream, buffer);
 }
 
 /******************************************************************************/
@@ -261,7 +263,7 @@ void STATIC (write_dictionary)(Map *object, CharStream *stream, int indent)
 
     JSON_indent(stream, indent + 1);
     CharStream_put(stream, '"');
-    JSON_write_text(&current->first.object, stream);
+    JSON_write_text((String*)&current->first.object, stream);
     CharStream_putstr(stream, " : ");
     JSON_write(&current->second.object, stream, indent + 1);
 
@@ -299,21 +301,19 @@ void STATIC (write_list)(Array *object, CharStream *stream, int indent)
 }
 
 /******************************************************************************/
-void STATIC (write_text)(String *object, CharStream *stream)
+void STATIC (write)(void *object, CharStream *stream, int indent)
 {
-  CharStream_put(stream, '"');
-  CharStream_putstr(stream, object->base);
-  CharStream_put(stream, '"');
-}
+  const Type *type = gettype(object);
 
-/******************************************************************************/
-void STATIC (write_number)(double *object, CharStream *stream)
-{
-  char buffer[256];
-
-  sprintf(buffer, "%f", *object);
-
-  CharStream_putstr(stream, buffer);
+  if (sametype(type, &OBJECT_TYPE(Map)) || sametype(type, &OBJECT_TYPE(JSON))) {
+    JSON_write_dictionary(object, stream, indent);
+  } else if (sametype(type, &OBJECT_TYPE(Array))) {
+    JSON_write_list(object, stream, indent);
+  } else if (sametype(type, &OBJECT_TYPE(String))) {
+    JSON_write_text(object, stream);
+  } else if (sametype(type, &OBJECT_TYPE(double))) {
+    JSON_write_number(object, stream);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
