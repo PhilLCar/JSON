@@ -51,13 +51,48 @@ JSON *_(cons)()
   return this;
 }
 
+/******************************************************************************/
+void STATIC (free_any)(void*);
+
+/******************************************************************************/
+void STATIC (free_dictionary)(Map *object)
+{
+  for (int i = 0; i < object->base.base.size; i++) {
+    Pair *current = Array_at(&object->base.base, i);
+
+    JSON_free_any(*(void**)current->second.object);
+  }
+}
+
+/******************************************************************************/
+void STATIC (free_list)(Array *object)
+{
+  for (int i = 0; i < object->size; i++) {
+    void *ptr = Array_atptr(object, i);
+
+    JSON_free_any(ptr);
+  }
+}
+
+/******************************************************************************/
+void STATIC (free_any)(void *object)
+{
+  const Type *type = gettype(object);
+
+  if (sametype(type, &OBJECT_TYPE(Array))) {
+    JSON_free_list((Array*)object);
+  } else if (!sametype(type, &OBJECT_TYPE(String)) && !sametype(type, &OBJECT_TYPE(double))) {
+    JSON_free_dictionary((Map*)object);
+  }
+
+  DELETE(object);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 void _(free)()
 {
-  // TODO:
-  for (int i = 0; i < BASE(2)->size; i++) {
-
-  }
+  JSON_free_dictionary(BASE(0));
+  Map_free(BASE(0));
 }
 
 /******************************************************************************/
@@ -248,7 +283,7 @@ void STATIC (write_number)(double *object, CharStream *stream)
 {
   char buffer[256];
 
-  sprintf(buffer, "%f", *object);
+  sprintf(buffer, "%g", *object);
 
   CharStream_putstr(stream, buffer);
 }
@@ -262,10 +297,9 @@ void STATIC (write_dictionary)(Map *object, CharStream *stream, int indent)
     Pair *current = Array_at(&object->base.base, i);
 
     JSON_indent(stream, indent + 1);
-    CharStream_put(stream, '"');
-    JSON_write_text((String*)&current->first.object, stream);
+    JSON_write_text((String*)current->first.object, stream);
     CharStream_putstr(stream, " : ");
-    JSON_write(&current->second.object, stream, indent + 1);
+    JSON_write(*(void**)current->second.object, stream, indent + 1);
 
     if (i < object->base.base.size - 1) {
       CharStream_put(stream, ',');
@@ -305,14 +339,14 @@ void STATIC (write)(void *object, CharStream *stream, int indent)
 {
   const Type *type = gettype(object);
 
-  if (sametype(type, &OBJECT_TYPE(Map)) || sametype(type, &OBJECT_TYPE(JSON))) {
-    JSON_write_dictionary(object, stream, indent);
-  } else if (sametype(type, &OBJECT_TYPE(Array))) {
+  if (sametype(type, &OBJECT_TYPE(Array))) {
     JSON_write_list(object, stream, indent);
   } else if (sametype(type, &OBJECT_TYPE(String))) {
     JSON_write_text(object, stream);
   } else if (sametype(type, &OBJECT_TYPE(double))) {
     JSON_write_number(object, stream);
+  } else {
+    JSON_write_dictionary(object, stream, indent);
   }
 }
 

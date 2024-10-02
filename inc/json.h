@@ -9,7 +9,7 @@
 #include <diagnostic.h>
 #include <oop.h>
 #include <map.h>
-#include <filestream.h>
+#include <charstream.h>
 #include <str.h>
 
 

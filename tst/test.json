@@ -1,7 +1,8 @@
 {
   "Object-test" : {
     "List-test" : [
-      {},
+      {
+      },
       "allo",
       50.3,
       [
