@@ -55,7 +55,7 @@ JSON *_(cons)()
 void STATIC (free_any)(void*);
 
 /******************************************************************************/
-void STATIC (free_dictionary)(Map *object)
+void STATIC (free_map)(Map *object)
 {
   for (int i = 0; i < object->base.base.size; i++) {
     Pair *current = Array_at(&object->base.base, i);
@@ -65,7 +65,7 @@ void STATIC (free_dictionary)(Map *object)
 }
 
 /******************************************************************************/
-void STATIC (free_list)(Array *object)
+void STATIC (free_array)(Array *object)
 {
   for (int i = 0; i < object->size; i++) {
     void *ptr = Array_atptr(object, i);
@@ -80,9 +80,9 @@ void STATIC (free_any)(void *object)
   const Type *type = gettype(object);
 
   if (sametype(type, &OBJECT_TYPE(Array))) {
-    JSON_free_list((Array*)object);
+    JSON_free_array((Array*)object);
   } else if (!sametype(type, &OBJECT_TYPE(String)) && !sametype(type, &OBJECT_TYPE(double))) {
-    JSON_free_dictionary((Map*)object);
+    JSON_free_map((Map*)object);
   }
 
   DELETE(object);
@@ -91,7 +91,7 @@ void STATIC (free_any)(void *object)
 ////////////////////////////////////////////////////////////////////////////////
 void _(free)()
 {
-  JSON_free_dictionary(BASE(0));
+  JSON_free_map(BASE(0));
   Map_free(BASE(0));
 }
 
@@ -156,9 +156,9 @@ double *STATIC (number)(CharStream *stream)
 }
 
 /******************************************************************************/
-Map *STATIC (dictionary)(CharStream *stream)
+Map *STATIC (map)(CharStream *stream)
 {
-  Map *dictionary = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cequals);
+  Map *map = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cequals);
 
   char c = JSON_skipws(stream);
 
@@ -180,7 +180,7 @@ Map *STATIC (dictionary)(CharStream *stream)
 
       void *value = JSON_any(stream);
 
-      Map_setkey(dictionary, key, &value);
+      Map_setkey(map, key, &value);
 
       if ((c = JSON_skipws(stream)) == ',') {
         CharStream_get(stream);
@@ -199,13 +199,13 @@ Map *STATIC (dictionary)(CharStream *stream)
     JSON_except("Reached EOF before deserialization was over!");
   }
 
-  return dictionary;
+  return map;
 }
 
 /******************************************************************************/
-Array *STATIC (list)(CharStream *stream)
+Array *STATIC (array)(CharStream *stream)
 {
-  Array *list = NEW (Array) (sizeof(void*));
+  Array *array = NEW (Array) (sizeof(void*));
 
   char c = JSON_skipws(stream);
 
@@ -217,7 +217,7 @@ Array *STATIC (list)(CharStream *stream)
 
       void *value = JSON_any(stream);
 
-      Array_push(list, &value);
+      Array_push(array, &value);
 
       if ((c = JSON_skipws(stream)) == ',') {
         CharStream_get(stream);
@@ -225,17 +225,17 @@ Array *STATIC (list)(CharStream *stream)
     }
 
     if (CharStream_get(stream) != ']') {
-      JSON_except("Expecting ']' at the end of a list (look for a missing ',').");
+      JSON_except("Expecting ']' at the end of a array (look for a missing ',').");
     }
   } else {
-    JSON_except("Expecting '[' at the begining of a list.");
+    JSON_except("Expecting '[' at the begining of a array.");
   }
   
   if (c == EOF) {
     JSON_except("Reached EOF before deserialization was over!");
   }
 
-  return list;
+  return array;
 }
 
 /******************************************************************************/
@@ -245,9 +245,9 @@ void *STATIC (any)(CharStream *stream)
 
   switch (c) {
     case '{':
-      return JSON_dictionary(stream);
+      return JSON_map(stream);
     case '[':
-      return JSON_list(stream);
+      return JSON_array(stream);
     case '"':
       return JSON_text(stream);
     default:
@@ -258,7 +258,7 @@ void *STATIC (any)(CharStream *stream)
 ////////////////////////////////////////////////////////////////////////////////
 void _(deserialize)(CharStream *stream)
 {
-  Map *json = JSON_dictionary(stream);
+  Map *json = JSON_map(stream);
 
   if (json != NULL) {
     JSON_free(this);
@@ -289,7 +289,7 @@ void STATIC (write_number)(double *object, CharStream *stream)
 }
 
 /******************************************************************************/
-void STATIC (write_dictionary)(Map *object, CharStream *stream, int indent)
+void STATIC (write_map)(Map *object, CharStream *stream, int indent)
 {
   CharStream_putline(stream, "{");
 
@@ -313,7 +313,7 @@ void STATIC (write_dictionary)(Map *object, CharStream *stream, int indent)
 }
 
 /******************************************************************************/
-void STATIC (write_list)(Array *object, CharStream *stream, int indent)
+void STATIC (write_array)(Array *object, CharStream *stream, int indent)
 {
   CharStream_putline(stream, "[");
 
@@ -340,13 +340,13 @@ void STATIC (write)(void *object, CharStream *stream, int indent)
   const Type *type = gettype(object);
 
   if (sametype(type, &OBJECT_TYPE(Array))) {
-    JSON_write_list(object, stream, indent);
+    JSON_write_array(object, stream, indent);
   } else if (sametype(type, &OBJECT_TYPE(String))) {
     JSON_write_text(object, stream);
   } else if (sametype(type, &OBJECT_TYPE(double))) {
     JSON_write_number(object, stream);
   } else {
-    JSON_write_dictionary(object, stream, indent);
+    JSON_write_map(object, stream, indent);
   }
 }
 
