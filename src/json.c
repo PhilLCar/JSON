@@ -277,7 +277,7 @@ void STATIC (write)(void*, CharStream*, int);
 void STATIC (write_text)(String *object, CharStream *stream)
 {
   CharStream_put(stream, '"');
-  CharStream_putstr(stream, object->base);
+  CharStream_writestr(stream, object->base);
   CharStream_put(stream, '"');
 }
 
