@@ -1,6 +1,5 @@
 {
   "files.associations": {
-    "random": "c",
-    "list": "c"
+    "random": "c"
   }
 }

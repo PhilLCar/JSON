@@ -45,7 +45,7 @@ void STATIC (indent)(CharStream *stream, int indent)
 JSON *_(cons)()
 {  
   if (this) {
-    Map_cons(BASE(0), OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cequals);
+    Map_cons(BASE(0), OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cmp);
   }
 
   return this;
@@ -107,10 +107,13 @@ String *STATIC (text)(CharStream *stream)
   if (c == '"') {
     CharStream_get(stream);
 
-    while ((c = CharStream_read(stream)) != EOF) {
+    while ((c = CharStream_get(stream)) != EOF) {
       switch (c) {
         case '"':
           break;
+        case '\\':
+          CharStream_unget(stream, c);
+          c = CharStream_read(stream);
         default:
           String_append(text, c);
           continue;
@@ -140,7 +143,7 @@ double *STATIC (number)(CharStream *stream)
   // For now numbers are going to be decimal floating points only
   while ((c = CharStream_peek(stream)) != EOF) {
     if ((c >= '0' && c <= '9') || c == '.') {
-      String_append(digits, CharStream_read(stream));
+      String_append(digits, CharStream_get(stream));
     } else break;
   }
 
@@ -158,7 +161,7 @@ double *STATIC (number)(CharStream *stream)
 /******************************************************************************/
 Map *STATIC (map)(CharStream *stream)
 {
-  Map *map = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cequals);
+  Map *map = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cmp);
 
   char c = JSON_skipws(stream);
 
