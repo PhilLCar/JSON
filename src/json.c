@@ -112,8 +112,7 @@ String *STATIC (text)(CharStream *stream)
         case '"':
           break;
         case '\\':
-          CharStream_unget(stream, c);
-          c = CharStream_read(stream);
+          c = CharStream_escape(stream);
         default:
           String_append(text, c);
           continue;
