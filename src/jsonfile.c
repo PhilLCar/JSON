@@ -38,3 +38,5 @@ void _(Destruct)()
     JSON_Destruct(BASE(0));
   }
 }
+
+#undef TYPENAME
