@@ -3,14 +3,14 @@
 #define TYPENAME JSONFile
 
 ////////////////////////////////////////////////////////////////////////////////
-JSONFile *_(Construct)(const char *filename)
+JSONFile *_(Construct)(const char *filename, int readonly)
 {  
   if (JSON_Construct(BASE(0))) {
     CharStream *stream = (CharStream*) NEW (FileStream) (fopen(filename, "r"));
 
     if (stream) {
       this->filename = filename;
-      this->flush    = 1; // <= default
+      this->readonly = readonly;
 
       JSON_Deserialize(BASE(0), stream);
       DELETE (stream);
@@ -26,7 +26,7 @@ JSONFile *_(Construct)(const char *filename)
 void _(Destruct)()
 {
   if (this) {
-    if (this->flush) {
+    if (!this->readonly) {
       CharStream *stream = (CharStream*) NEW (FileStream) (fopen(this->filename, "w+"));
 
       if (stream) {
