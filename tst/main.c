@@ -10,6 +10,8 @@ int main(void)
 
   JSONFile *json = NEW (JSONFile) ("tst/test.json");
 
+// TODO: Check with read-to-end
+
   CHECK_MEMORY
 
   DELETE (json);

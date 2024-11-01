@@ -26,13 +26,15 @@ JSONFile *_(Construct)(const char *filename)
 void _(Destruct)()
 {
   if (this) {
-    CharStream *stream = (CharStream*) NEW (FileStream) (fopen(this->filename, "w+"));
+    if (this->flush) {
+      CharStream *stream = (CharStream*) NEW (FileStream) (fopen(this->filename, "w+"));
 
-    if (stream) {
-      JSON_Serialize(BASE(0), stream);
-      DELETE (stream);
-    } else {
-      THROW(NEW (Exception)("Couldn't open file!"));
+      if (stream) {
+        JSON_Serialize(BASE(0), stream);
+        DELETE (stream);
+      } else {
+        THROW(NEW (Exception)("Couldn't open file!"));
+      }
     }
 
     JSON_Destruct(BASE(0));
