@@ -3,19 +3,19 @@
 #define TYPENAME JSONFile
 
 ////////////////////////////////////////////////////////////////////////////////
-JSONFile *_(cons)(const char *filename)
+JSONFile *_(Construct)(const char *filename)
 {  
-  if (this) {
-    JSON_cons(BASE(0));
-    this->filename = filename;
+  if (JSON_Construct(BASE(0))) {
+    CharStream *stream = (CharStream*) NEW (FileStream) (fopen(filename, "r"));
 
-    {
-      CharStream *stream = (CharStream*) NEW (FileStream) (fopen(filename, "r"));
+    if (stream) {
+      this->filename = filename;
+      this->flush    = 1; // <= default
 
-      if (stream) {
-        JSON_deserialize(BASE(0), stream);
-        DELETE (stream);
-      }
+      JSON_Deserialize(BASE(0), stream);
+      DELETE (stream);
+    } else {
+      THROW(NEW (Exception)("File not found!"));
     }
   }
 
@@ -23,14 +23,18 @@ JSONFile *_(cons)(const char *filename)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void _(free)()
+void _(Destruct)()
 {
-  CharStream *stream = (CharStream*) NEW (FileStream) (fopen(this->filename, "w+"));
+  if (this) {
+    CharStream *stream = (CharStream*) NEW (FileStream) (fopen(this->filename, "w+"));
 
-  if (stream) {
-    JSON_serialize(BASE(0), stream);
-    DELETE (stream);
+    if (stream) {
+      JSON_Serialize(BASE(0), stream);
+      DELETE (stream);
+    } else {
+      THROW(NEW (Exception)("Couldn't open file!"));
+    }
+
+    JSON_Destruct(BASE(0));
   }
-
-  JSON_free(BASE(0));
 }

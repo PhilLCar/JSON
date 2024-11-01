@@ -5,24 +5,17 @@
 OBJECTIFY(double);
 
 /******************************************************************************/
-void STATIC (except) (const char *message)
-{
-  fprintf(stderr, "%s\n", message);
-  exit(-1);
-}
-
-/******************************************************************************/
 char STATIC (skipws)(CharStream *stream)
 {
   char c;
 
-  while ((c = CharStream_peek(stream)) != EOF) {
+  while ((c = CharStream_Peek(stream)) != EOF) {
     switch (c) {
       case '\n':
       case '\r':
       case ' ':
       case '\t':
-        CharStream_get(stream);
+        CharStream_Get(stream);
         continue;
       default:
         break;
@@ -37,62 +30,60 @@ char STATIC (skipws)(CharStream *stream)
 void STATIC (indent)(CharStream *stream, int indent)
 {
   for (int i = 0; i < indent << 1; i++) {
-    CharStream_put(stream, ' ');
+    CharStream_Put(stream, ' ');
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-JSON *_(cons)()
+JSON *_(Construct)()
 {  
-  if (this) {
-    Map_cons(BASE(0), OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cmp);
-  }
-
-  return this;
+  return (JSON*)Map_Construct(BASE(0), OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_Cmp);
 }
 
 /******************************************************************************/
-void STATIC (free_any)(void*);
+void STATIC (destruct_any)(void*);
 
 /******************************************************************************/
-void STATIC (free_map)(Map *object)
+void STATIC (destruct_map)(Map *object)
 {
   for (int i = 0; i < object->base.base.size; i++) {
-    Pair *current = Array_at(&object->base.base, i);
+    Pair *current = Array_At(&object->base.base, i);
 
-    JSON_free_any(*(void**)current->second.object);
+    JSON_destruct_any(*(void**)current->second.object);
   }
 }
 
 /******************************************************************************/
-void STATIC (free_array)(Array *object)
+void STATIC (destruct_array)(Array *object)
 {
   for (int i = 0; i < object->size; i++) {
-    void *ptr = Array_atptr(object, i);
+    void *ptr = Array_AtDeref(object, i);
 
-    JSON_free_any(ptr);
+    JSON_destruct_any(ptr);
   }
 }
 
 /******************************************************************************/
-void STATIC (free_any)(void *object)
+void STATIC (destruct_any)(void *object)
 {
   const Type *type = gettype(object);
 
   if (sametype(type, &OBJECT_TYPE(Array))) {
-    JSON_free_array((Array*)object);
+    JSON_destruct_array((Array*)object);
   } else if (!sametype(type, &OBJECT_TYPE(String)) && !sametype(type, &OBJECT_TYPE(double))) {
-    JSON_free_map((Map*)object);
+    JSON_destruct_map((Map*)object);
   }
 
   DELETE(object);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void _(free)()
+void _(Destruct)()
 {
-  JSON_free_map(BASE(0));
-  Map_free(BASE(0));
+  if (this) {
+    JSON_destruct_map(BASE(0));
+    Map_Destruct(BASE(0));
+  }
 }
 
 /******************************************************************************/
@@ -105,26 +96,26 @@ String *STATIC (text)(CharStream *stream)
   char c = JSON_skipws(stream);
 
   if (c == '"') {
-    CharStream_get(stream);
+    CharStream_Get(stream);
 
-    while ((c = CharStream_get(stream)) != EOF) {
+    while ((c = CharStream_Get(stream)) != EOF) {
       switch (c) {
         case '"':
           break;
         case '\\':
-          c = CharStream_escape(stream);
+          c = CharStream_Escape(stream);
         default:
-          String_append(text, c);
+          String_Append(text, c);
           continue;
       }
       break;
     }
   } else {
-    JSON_except("Expecting '\"' at the begining of a string.");
+    THROW(NEW (JSONException)("Expecting '\"' at the begining of a string."));
   }
 
   if (c == EOF) {
-    JSON_except("Reached EOF before deserialization was over!");
+    THROW(NEW (JSONException)("Reached EOF before deserialization was over!"));
   }
 
   return text;
@@ -140,14 +131,14 @@ double *STATIC (number)(CharStream *stream)
   JSON_skipws(stream);
 
   // For now numbers are going to be decimal floating points only
-  while ((c = CharStream_peek(stream)) != EOF) {
+  while ((c = CharStream_Peek(stream)) != EOF) {
     if ((c >= '0' && c <= '9') || c == '.') {
-      String_append(digits, CharStream_get(stream));
+      String_Append(digits, CharStream_Get(stream));
     } else break;
   }
 
   if (c == EOF) {
-    JSON_except("Reached EOF before deserialization was over!");
+    THROW(NEW (JSONException)("Reached EOF before deserialization was over!"));
   }
 
   *number = atof(digits->base);
@@ -160,12 +151,12 @@ double *STATIC (number)(CharStream *stream)
 /******************************************************************************/
 Map *STATIC (map)(CharStream *stream)
 {
-  Map *map = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_cmp);
+  Map *map = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_Cmp);
 
   char c = JSON_skipws(stream);
 
   if (c == '{') {
-    CharStream_get(stream);
+    CharStream_Get(stream);
 
     while ((c = JSON_skipws(stream)) != EOF) {
       if (c == '}') break;
@@ -173,32 +164,32 @@ Map *STATIC (map)(CharStream *stream)
       String *key = JSON_text(stream);
 
       if (JSON_skipws(stream) == ':') {
-        CharStream_get(stream);
+        CharStream_Get(stream);
       } else {
         char error[256];
         sprintf(error, "Expecting ':' after key '%s'!", key->base);
-        JSON_except(error);
+        THROW(NEW(JSONException)(error));
       }
 
       void *value = JSON_any(stream);
 
-      Map_setkey(map, key, &value);
+      Map_Set(map, key, &value);
 
       if ((c = JSON_skipws(stream)) == ',') {
-        CharStream_get(stream);
+        CharStream_Get(stream);
       } else break;
     }
 
-    if (CharStream_get(stream) != '}') {
-      JSON_except("Expecting '}' at the end of a dictonary (look for a missing ',').");
+    if (CharStream_Get(stream) != '}') {
+      THROW(NEW (Exception)("Expecting '}' at the end of a dictonary (look for a missing ',')."));
     }
 
   } else {
-    JSON_except("Expecting '{' at the begining of a dictonary.");
+    THROW(NEW (Exception)("Expecting '{' at the begining of a dictonary."));
   }
 
   if (c == EOF) {
-    JSON_except("Reached EOF before deserialization was over!");
+    THROW(NEW (Exception)("Reached EOF before deserialization was over!"));
   }
 
   return map;
@@ -212,29 +203,29 @@ Array *STATIC (array)(CharStream *stream)
   char c = JSON_skipws(stream);
 
   if (c == '[') {
-    CharStream_get(stream);
+    CharStream_Get(stream);
 
     while ((c = JSON_skipws(stream)) != EOF) {
       if (c == ']') break;
 
       void *value = JSON_any(stream);
 
-      Array_push(array, &value);
+      Array_Push(array, &value);
 
       if ((c = JSON_skipws(stream)) == ',') {
-        CharStream_get(stream);
+        CharStream_Get(stream);
       } else break;
     }
 
-    if (CharStream_get(stream) != ']') {
-      JSON_except("Expecting ']' at the end of a array (look for a missing ',').");
+    if (CharStream_Get(stream) != ']') {
+      THROW(NEW (Exception)("Expecting ']' at the end of a array (look for a missing ',')."));
     }
   } else {
-    JSON_except("Expecting '[' at the begining of a array.");
+    THROW(NEW (Exception)("Expecting '[' at the begining of a array."));
   }
   
   if (c == EOF) {
-    JSON_except("Reached EOF before deserialization was over!");
+    THROW(NEW (Exception)("Reached EOF before deserialization was over!"));
   }
 
   return array;
@@ -258,12 +249,12 @@ void *STATIC (any)(CharStream *stream)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void _(deserialize)(CharStream *stream)
+void _(Deserialize)(CharStream *stream)
 {
   Map *json = JSON_map(stream);
 
   if (json != NULL) {
-    JSON_free(this);
+    JSON_Destruct(this);
     memcpy(BASE(0), json, sizeof(Map));
     tfree(json);
   }
@@ -275,9 +266,9 @@ void STATIC (write)(void*, CharStream*, int);
 /******************************************************************************/
 void STATIC (write_text)(String *object, CharStream *stream)
 {
-  CharStream_put(stream, '"');
-  CharStream_writestr(stream, object->base);
-  CharStream_put(stream, '"');
+  CharStream_Put(stream, '"');
+  CharStream_WriteString(stream, object->base);
+  CharStream_Put(stream, '"');
 }
 
 /******************************************************************************/
@@ -287,53 +278,53 @@ void STATIC (write_number)(double *object, CharStream *stream)
 
   sprintf(buffer, "%g", *object);
 
-  CharStream_putstr(stream, buffer);
+  CharStream_PutString(stream, buffer);
 }
 
 /******************************************************************************/
 void STATIC (write_map)(Map *object, CharStream *stream, int indent)
 {
-  CharStream_putline(stream, "{");
+  CharStream_PutLine(stream, "{");
 
   for (int i = 0; i < object->base.base.size; i++) {
-    Pair *current = Array_at(&object->base.base, i);
+    Pair *current = Array_At(&object->base.base, i);
 
     JSON_indent(stream, indent + 1);
     JSON_write_text((String*)current->first.object, stream);
-    CharStream_putstr(stream, " : ");
+    CharStream_PutString(stream, " : ");
     JSON_write(*(void**)current->second.object, stream, indent + 1);
 
     if (i < object->base.base.size - 1) {
-      CharStream_put(stream, ',');
+      CharStream_Put(stream, ',');
     }
 
-    CharStream_putline(stream, "");
+    CharStream_PutLine(stream, "");
   }
 
   JSON_indent(stream, indent);
-  CharStream_put(stream, '}');
+  CharStream_Put(stream, '}');
 }
 
 /******************************************************************************/
 void STATIC (write_array)(Array *object, CharStream *stream, int indent)
 {
-  CharStream_putline(stream, "[");
+  CharStream_PutLine(stream, "[");
 
   for (int i = 0; i < object->size; i++) {
-    void *ptr = Array_atptr(object, i);
+    void *ptr = Array_AtDeref(object, i);
 
     JSON_indent(stream, indent + 1);
     JSON_write(ptr, stream, indent + 1);
 
     if (i < object->size - 1) {
-      CharStream_put(stream, ',');
+      CharStream_Put(stream, ',');
     }
 
-    CharStream_putline(stream, "");
+    CharStream_PutLine(stream, "");
   }
 
   JSON_indent(stream, indent);
-  CharStream_put(stream, ']');
+  CharStream_Put(stream, ']');
 }
 
 /******************************************************************************/
@@ -353,8 +344,24 @@ void STATIC (write)(void *object, CharStream *stream, int indent)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void _(serialize)(CharStream *stream)
+void _(Serialize)(CharStream *stream)
 {
   JSON_write(this, stream, 0);
-  CharStream_putline(stream, "");
+  CharStream_PutLine(stream, "");
 }
+
+#undef TYPENAME
+
+#define TYPENAME JSONException
+
+JSONException *_(Construct)(const char *message)
+{
+  return (JSONException*)Exception_Construct(BASE(0), message);
+}
+
+void _(Destruct)()
+{
+  Exception_Destruct(BASE(0));
+}
+
+#undef TYPENAME

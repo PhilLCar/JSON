@@ -17,10 +17,17 @@
 
 // (!) This class must always be initialized using the NEW macro
 OBJECT () INHERIT (Map)
-END();
+END_OBJECT();
 
-void _(deserialize)(CharStream *stream);
-void _(serialize)(CharStream *stream);
+void _(Deserialize)(CharStream *stream);
+void _(Serialize)(CharStream *stream);
+
+#undef TYPENAME
+
+#define TYPENAME JSONException
+
+OBJECT (const char *message) INHERIT (Exception)
+END_OBJECT("");
 
 #undef TYPENAME
 #endif

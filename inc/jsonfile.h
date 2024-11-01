@@ -10,14 +10,13 @@
 #include <filestream.h>
 #include <json.h>
 
-
 #define TYPENAME JSONFile
 
 // (!) This class must always be initialized using the NEW macro
 OBJECT(const char *filename) INHERIT (JSON)
   const char *filename;
-END(NULL);
-
+  int         flush;
+END_OBJECT(NULL);
 
 #undef TYPENAME
 #endif
