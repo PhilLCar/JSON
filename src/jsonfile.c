@@ -9,9 +9,10 @@ JSONFile *_(Construct)(const char *filename, int readonly)
     CharStream *stream = (CharStream*) NEW (FileStream) (fopen(filename, "r"));
 
     if (stream) {
-      this->filename = filename;
+      this->filename = malloc(strlen(filename) + 1);
       this->readonly = readonly;
 
+      strcpy((void*)this->filename, filename);
       JSON_Deserialize(BASE(0), stream);
       DELETE (stream);
     } else {
@@ -35,8 +36,14 @@ void _(Destruct)()
       } else {
         THROW(NEW (Exception)("Couldn't open file!"));
       }
+
     }
 
+    if (this->filename) {
+      free((void*)this->filename);
+      this->filename = NULL;
+    }
+    
     JSON_Destruct(BASE(0));
   }
 }
