@@ -3,20 +3,23 @@
 #define TYPENAME JSONFile
 
 ////////////////////////////////////////////////////////////////////////////////
-JSONFile *_(Construct)(const char *filename, int readonly)
+JSONFile *_(Construct)(const char *filename, FileAccessModes mode)
 {  
   if (JSON_Construct(BASE(0))) {
-    CharStream *stream = (CharStream*) NEW (FileStream) (fopen(filename, "r"));
+    this->filename = malloc(strlen(filename) + 1);
+    this->mode     = mode;
 
-    if (stream) {
-      this->filename = malloc(strlen(filename) + 1);
-      this->readonly = readonly;
+    strcpy((void*)this->filename, filename);
 
-      strcpy((void*)this->filename, filename);
-      JSON_Deserialize(BASE(0), stream);
-      DELETE (stream);
-    } else {
-      THROW(NEW (Exception)("File not found!"));
+    if (mode & FILEACCESS_READ) {
+      CharStream *stream = (CharStream*) NEW (FileStream) (fopen(filename, "r"));
+
+      if (stream) {
+        JSON_Deserialize(BASE(0), stream);
+        DELETE (stream);
+      } else {
+        THROW(NEW (Exception)("File not found!"));
+      }
     }
   }
 
@@ -27,7 +30,7 @@ JSONFile *_(Construct)(const char *filename, int readonly)
 void _(Destruct)()
 {
   if (this) {
-    if (!this->readonly) {
+    if (this->mode & FILEACCESS_WRITE) {
       CharStream *stream = (CharStream*) NEW (FileStream) (fopen(this->filename, "w+"));
 
       if (stream) {
@@ -36,13 +39,10 @@ void _(Destruct)()
       } else {
         THROW(NEW (Exception)("Couldn't open file!"));
       }
-
     }
 
-    if (this->filename) {
-      free((void*)this->filename);
-      this->filename = NULL;
-    }
+    free((void*)this->filename);
+    this->filename = NULL;
     
     JSON_Destruct(BASE(0));
   }

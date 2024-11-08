@@ -8,7 +8,7 @@ int main(void)
 {
   CHECK_MEMORY
 
-  JSONFile *json = NEW (JSONFile) ("tst/test.json", 0);
+  JSONFile *json = NEW (JSONFile) ("tst/test.json", FILEACCESS_READ | FILEACCESS_WRITE);
 
 // TODO: Check with read-to-end
 
