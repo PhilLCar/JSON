@@ -6,10 +6,12 @@
 JSONFile *_(Construct)(const char *filename, FileAccessModes mode)
 {  
   if (JSON_Construct(BASE(0))) {
-    this->filename = malloc(strlen(filename) + 1);
-    this->mode     = mode;
+    if (this->filename) {
+      this->filename = malloc(strlen(filename) + 1);
+      this->mode     = mode;
 
-    strcpy((void*)this->filename, filename);
+      strcpy((void*)this->filename, filename);
+    }
 
     if (mode & FILEACCESS_READ) {
       CharStream *stream = (CharStream*) NEW (FileStream) (fopen(filename, "r"));
@@ -41,9 +43,11 @@ void _(Destruct)()
       }
     }
 
-    free((void*)this->filename);
-    this->filename = NULL;
-    
+    if (this->filename) {
+      free((void*)this->filename);
+      this->filename = NULL;
+    }
+      
     JSON_Destruct(BASE(0));
   }
 }
