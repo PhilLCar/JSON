@@ -16,7 +16,7 @@
 OBJECT(const char *filename, FileAccessModes mode) INHERIT (JSON)
   const char      *filename;
   FileAccessModes  mode;
-END_OBJECT(NULL, FILEACCESS_READ);
+END_OBJECT(NULL, 0);
 
 #undef TYPENAME
 #endif
