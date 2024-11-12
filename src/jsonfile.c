@@ -6,7 +6,7 @@
 JSONFile *_(Construct)(const char *filename, FileAccessModes mode)
 {  
   if (JSON_Construct(BASE(0))) {
-    if (this->filename) {
+    if (filename) {
       this->filename = malloc(strlen(filename) + 1);
       this->mode     = mode;
 
