@@ -37,7 +37,7 @@ void STATIC (indent)(CharStream *stream, int indent)
 ////////////////////////////////////////////////////////////////////////////////
 JSON *_(Construct)()
 {  
-  return (JSON*)Map_Construct(BASE(0), OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_Cmp);
+  return (JSON*)Map_Construct(BASE(0), TYPEOF (String), TYPEOF (NATIVE(void*)), (Comparer)String_Cmp);
 }
 
 /******************************************************************************/
@@ -68,9 +68,9 @@ void STATIC (destruct_any)(void *object)
 {
   const Type *type = gettype(object);
 
-  if (sametype(type, &OBJECT_TYPE(Array))) {
+  if (sametype(type, TYPEOF (Array))) {
     JSON_destruct_array((Array*)object);
-  } else if (!sametype(type, &OBJECT_TYPE(String)) && !sametype(type, &OBJECT_TYPE(double))) {
+  } else if (!sametype(type, TYPEOF (String)) && !sametype(type, TYPEOF (double))) {
     JSON_destruct_map((Map*)object);
   }
 
@@ -125,7 +125,7 @@ String *STATIC (text)(CharStream *stream)
 double *STATIC (number)(CharStream *stream)
 {
   String *digits = NEW (String) ("");
-  double *number = talloc(&OBJECT_TYPE(double));
+  double *number = talloc(TYPEOF (double));
   char    c;
 
   JSON_skipws(stream);
@@ -151,7 +151,7 @@ double *STATIC (number)(CharStream *stream)
 /******************************************************************************/
 Map *STATIC (map)(CharStream *stream)
 {
-  Map *map = NEW (Map) (OBJECT_TYPE(String), NATIVE_TYPE(void*), (Comparer)String_Cmp);
+  Map *map = NEW (Map) (TYPEOF (String), TYPEOF (NATIVE(void*)), (Comparer)String_Cmp);
 
   char c = JSON_skipws(stream);
 
@@ -332,11 +332,11 @@ void STATIC (write)(void *object, CharStream *stream, int indent)
 {
   const Type *type = gettype(object);
 
-  if (sametype(type, &OBJECT_TYPE(Array))) {
+  if (sametype(type, TYPEOF (Array))) {
     JSON_write_array(object, stream, indent);
-  } else if (sametype(type, &OBJECT_TYPE(String))) {
+  } else if (sametype(type, TYPEOF (String))) {
     JSON_write_text(object, stream);
-  } else if (sametype(type, &OBJECT_TYPE(double))) {
+  } else if (sametype(type, TYPEOF (double))) {
     JSON_write_number(object, stream);
   } else {
     JSON_write_map(object, stream, indent);
