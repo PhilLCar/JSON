@@ -3,7 +3,7 @@
 #define TYPENAME JSONFile
 
 ////////////////////////////////////////////////////////////////////////////////
-JSONFile *_(Construct)(const char *filename, FileAccessModes mode)
+JSONFile *_(Construct)(const char *filename, AccessModes mode)
 {  
   if (JSON_Construct(BASE(0))) {
     if (filename) {
@@ -13,7 +13,7 @@ JSONFile *_(Construct)(const char *filename, FileAccessModes mode)
       strcpy((void*)this->filename, filename);
     }
 
-    if (mode & FILEACCESS_READ) {
+    if (mode & ACCESS_READ) {
       CharStream *stream = (CharStream*) NEW (FileStream) (fopen(filename, "r"));
 
       if (stream) {
@@ -32,7 +32,7 @@ JSONFile *_(Construct)(const char *filename, FileAccessModes mode)
 void _(Destruct)()
 {
   if (this) {
-    if (this->mode & FILEACCESS_WRITE) {
+    if (this->mode & ACCESS_WRITE) {
       CharStream *stream = (CharStream*) NEW (FileStream) (fopen(this->filename, "w+"));
 
       if (stream) {

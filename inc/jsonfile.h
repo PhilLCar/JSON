@@ -13,9 +13,9 @@
 #define TYPENAME JSONFile
 
 // (!) This class must always be initialized using the NEW macro
-OBJECT(const char *filename, FileAccessModes mode) INHERIT (JSON)
+OBJECT(const char *filename, AccessModes mode) INHERIT (JSON)
   const char      *filename;
-  FileAccessModes  mode;
+  AccessModes  mode;
 END_OBJECT(NULL, 0);
 
 #undef TYPENAME
