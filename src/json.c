@@ -267,7 +267,7 @@ void STATIC (write)(void*, CharStream*, int);
 void STATIC (write_text)(String *object, CharStream *stream)
 {
   CharStream_Put(stream, '"');
-  CharStream_WriteString(stream, object->base);
+  CharStream_WriteStr(stream, object->base);
   CharStream_Put(stream, '"');
 }
 
@@ -278,27 +278,27 @@ void STATIC (write_number)(double *object, CharStream *stream)
 
   sprintf(buffer, "%g", *object);
 
-  CharStream_PutString(stream, buffer);
+  CharStream_PutStr(stream, buffer);
 }
 
 /******************************************************************************/
 void STATIC (write_map)(Map *object, CharStream *stream, int indent)
 {
-  CharStream_PutLine(stream, "{");
+  CharStream_PutLn(stream, "{");
 
   for (int i = 0; i < object->base.base.size; i++) {
     Pair *current = Array_At(&object->base.base, i);
 
     JSON_indent(stream, indent + 1);
     JSON_write_text((String*)current->first.object, stream);
-    CharStream_PutString(stream, " : ");
+    CharStream_PutStr(stream, " : ");
     JSON_write(*(void**)current->second.object, stream, indent + 1);
 
     if (i < object->base.base.size - 1) {
       CharStream_Put(stream, ',');
     }
 
-    CharStream_PutLine(stream, "");
+    CharStream_PutLn(stream, "");
   }
 
   JSON_indent(stream, indent);
@@ -308,7 +308,7 @@ void STATIC (write_map)(Map *object, CharStream *stream, int indent)
 /******************************************************************************/
 void STATIC (write_array)(Array *object, CharStream *stream, int indent)
 {
-  CharStream_PutLine(stream, "[");
+  CharStream_PutLn(stream, "[");
 
   for (int i = 0; i < object->size; i++) {
     void *ptr = Array_AtDeref(object, i);
@@ -320,7 +320,7 @@ void STATIC (write_array)(Array *object, CharStream *stream, int indent)
       CharStream_Put(stream, ',');
     }
 
-    CharStream_PutLine(stream, "");
+    CharStream_PutLn(stream, "");
   }
 
   JSON_indent(stream, indent);
@@ -347,7 +347,7 @@ void STATIC (write)(void *object, CharStream *stream, int indent)
 void _(Serialize)(CharStream *stream)
 {
   JSON_write(this, stream, 0);
-  CharStream_PutLine(stream, "");
+  CharStream_PutLn(stream, "");
 }
 
 #undef TYPENAME
