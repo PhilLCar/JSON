@@ -37,7 +37,7 @@ void STATIC (indent)(CharStream *stream, int indent)
 ////////////////////////////////////////////////////////////////////////////////
 JSON *_(Construct)()
 {  
-  return (JSON*)Map_Construct(BASE(0), TYPEOF (String), TYPEOF (NATIVE(void*)), (Comparer)String_Cmp);
+  return (JSON*)Map_Construct(BASE(0), TYPEOF (String), TYPEOF (NATIVE(void*)));
 }
 
 /******************************************************************************/
@@ -151,7 +151,7 @@ double *STATIC (number)(CharStream *stream)
 /******************************************************************************/
 Map *STATIC (map)(CharStream *stream)
 {
-  Map *map = NEW (Map) (TYPEOF (String), TYPEOF (NATIVE(void*)), (Comparer)String_Cmp);
+  Map *map = NEW (Map) (TYPEOF (String), TYPEOF (NATIVE(void*)));
 
   char c = JSON_skipws(stream);
 
