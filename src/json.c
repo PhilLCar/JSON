@@ -2,8 +2,6 @@
 
 #define TYPENAME JSON
 
-OBJECTIFY(double);
-
 /******************************************************************************/
 char STATIC (skipws)(CharStream *stream)
 {
@@ -37,45 +35,45 @@ void STATIC (indent)(CharStream *stream, int indent)
 ////////////////////////////////////////////////////////////////////////////////
 JSON *_(Construct)()
 {  
-  return (JSON*)Map_Construct(BASE(0), TYPEOF (String), TYPEOF (NATIVE(void*)));
+  return (JSON*)Map_Construct(BASE(0), TYPEOF (String));
 }
 
-/******************************************************************************/
-void STATIC (destruct_any)(void*);
+// /******************************************************************************/
+// void STATIC (destruct_any)(void*);
+//
+// /******************************************************************************/
+// void STATIC (destruct_map)(Map *object)
+// {
+//   for (int i = 0; i < object->base.base.size; i++) {
+//     Pair *current = Array_At(&object->base.base, i);
 
-/******************************************************************************/
-void STATIC (destruct_map)(Map *object)
-{
-  for (int i = 0; i < object->base.base.size; i++) {
-    Pair *current = Array_At(&object->base.base, i);
+//     JSON_destruct_any(*(void**)current->second.object);
+//   }
+// }
 
-    JSON_destruct_any(*(void**)current->second.object);
-  }
-}
+// /******************************************************************************/
+// void STATIC (destruct_array)(Array *object)
+// {
+//   for (int i = 0; i < object->size; i++) {
+//     void *ptr = Array_AtDeref(object, i);
 
-/******************************************************************************/
-void STATIC (destruct_array)(Array *object)
-{
-  for (int i = 0; i < object->size; i++) {
-    void *ptr = Array_AtDeref(object, i);
+//     JSON_destruct_any(ptr);
+//   }
+// }
 
-    JSON_destruct_any(ptr);
-  }
-}
+// /******************************************************************************/
+// void STATIC (destruct_any)(void *object)
+// {
+//   const Type *type = gettype(object);
 
-/******************************************************************************/
-void STATIC (destruct_any)(void *object)
-{
-  const Type *type = gettype(object);
+//   if (sametype(type, TYPEOF (Array))) {
+//     JSON_destruct_array((Array*)object);
+//   } else if (!sametype(type, TYPEOF (String)) && !sametype(type, TYPEOF (double))) {
+//     JSON_destruct_map((Map*)object);
+//   }
 
-  if (sametype(type, TYPEOF (Array))) {
-    JSON_destruct_array((Array*)object);
-  } else if (!sametype(type, TYPEOF (String)) && !sametype(type, TYPEOF (double))) {
-    JSON_destruct_map((Map*)object);
-  }
-
-  DELETE(object);
-}
+//   DELETE(object);
+// }
 
 ////////////////////////////////////////////////////////////////////////////////
 void _(Destruct)()
@@ -151,7 +149,7 @@ double *STATIC (number)(CharStream *stream)
 /******************************************************************************/
 Map *STATIC (map)(CharStream *stream)
 {
-  Map *map = NEW (Map) (TYPEOF (String), TYPEOF (NATIVE(void*)));
+  Map *map = NEW (Map) (TYPEOF (String));
 
   char c = JSON_skipws(stream);
 
@@ -173,7 +171,7 @@ Map *STATIC (map)(CharStream *stream)
 
       void *value = JSON_any(stream);
 
-      Map_Set(map, key, &value);
+      Map_Set(map, key, value);
 
       if ((c = JSON_skipws(stream)) == ',') {
         CharStream_Get(stream);
@@ -196,9 +194,9 @@ Map *STATIC (map)(CharStream *stream)
 }
 
 /******************************************************************************/
-Array *STATIC (array)(CharStream *stream)
+List *STATIC (list)(CharStream *stream)
 {
-  Array *array = NEW (Array) (sizeof(void*));
+  List *list = NEW (List) ();
 
   char c = JSON_skipws(stream);
 
@@ -210,7 +208,7 @@ Array *STATIC (array)(CharStream *stream)
 
       void *value = JSON_any(stream);
 
-      Array_Push(array, &value);
+      List_Add(list, value);
 
       if ((c = JSON_skipws(stream)) == ',') {
         CharStream_Get(stream);
@@ -228,7 +226,7 @@ Array *STATIC (array)(CharStream *stream)
     THROW(NEW (Exception)("Reached EOF before deserialization was over!"));
   }
 
-  return array;
+  return list;
 }
 
 /******************************************************************************/
@@ -240,7 +238,7 @@ void *STATIC (any)(CharStream *stream)
     case '{':
       return JSON_map(stream);
     case '[':
-      return JSON_array(stream);
+      return JSON_list(stream);
     case '"':
       return JSON_text(stream);
     default:
@@ -249,15 +247,13 @@ void *STATIC (any)(CharStream *stream)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void _(Deserialize)(CharStream *stream)
+JSON *_(Deserialize)(CharStream *stream)
 {
-  Map *json = JSON_map(stream);
+  JSON_Destruct(this);
 
-  if (json != NULL) {
-    JSON_Destruct(this);
-    memcpy(BASE(0), json, sizeof(Map));
-    tfree(json);
-  }
+  memcpy(this, JSON_map(stream), sizeof(Map));
+  
+  return this;
 }
 
 /******************************************************************************/
@@ -267,18 +263,14 @@ void STATIC (write)(void*, CharStream*, int);
 void STATIC (write_text)(String *object, CharStream *stream)
 {
   CharStream_Put(stream, '"');
-  CharStream_WriteStr(stream, object->base);
+  CharStream_WriteString(stream, object);
   CharStream_Put(stream, '"');
 }
 
 /******************************************************************************/
 void STATIC (write_number)(double *object, CharStream *stream)
 {
-  char buffer[256];
-
-  sprintf(buffer, "%g", *object);
-
-  CharStream_PutStr(stream, buffer);
+  CharStream_WriteString(stream, object);
 }
 
 /******************************************************************************/
@@ -290,9 +282,9 @@ void STATIC (write_map)(Map *object, CharStream *stream, int indent)
     Pair *current = Array_At(&object->base.base, i);
 
     JSON_indent(stream, indent + 1);
-    JSON_write_text((String*)current->first.object, stream);
+    JSON_write_text(current->first, stream);
     CharStream_PutStr(stream, " : ");
-    JSON_write(*(void**)current->second.object, stream, indent + 1);
+    JSON_write(current->second, stream, indent + 1);
 
     if (i < object->base.base.size - 1) {
       CharStream_Put(stream, ',');
@@ -306,17 +298,17 @@ void STATIC (write_map)(Map *object, CharStream *stream, int indent)
 }
 
 /******************************************************************************/
-void STATIC (write_array)(Array *object, CharStream *stream, int indent)
+void STATIC (write_list)(List *object, CharStream *stream, int indent)
 {
   CharStream_PutLn(stream, "[");
 
-  for (int i = 0; i < object->size; i++) {
-    void *ptr = Array_AtDeref(object, i);
+  for (List *l = object; !List_Empty(l); l = List_Next(l)) {
+    void *ptr = List_Head(l);
 
     JSON_indent(stream, indent + 1);
     JSON_write(ptr, stream, indent + 1);
 
-    if (i < object->size - 1) {
+    if (!List_Empty(List_Next(l))) {
       CharStream_Put(stream, ',');
     }
 
@@ -332,8 +324,8 @@ void STATIC (write)(void *object, CharStream *stream, int indent)
 {
   const Type *type = gettype(object);
 
-  if (sametype(type, TYPEOF (Array))) {
-    JSON_write_array(object, stream, indent);
+  if (sametype(type, TYPEOF (List))) {
+    JSON_write_list(object, stream, indent);
   } else if (sametype(type, TYPEOF (String))) {
     JSON_write_text(object, stream);
   } else if (sametype(type, TYPEOF (double))) {

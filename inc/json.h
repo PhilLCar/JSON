@@ -11,7 +11,7 @@
 #include <map.h>
 #include <charstream.h>
 #include <str.h>
-
+#include <list.h>
 
 #define TYPENAME JSON
 
@@ -19,8 +19,8 @@
 OBJECT () INHERIT (Map)
 END_OBJECT();
 
-void _(Deserialize)(CharStream *stream);
-void _(Serialize)(CharStream *stream);
+JSON *_(Deserialize)(CharStream *stream);
+void  _(Serialize)(CharStream *stream);
 
 #undef TYPENAME
 
