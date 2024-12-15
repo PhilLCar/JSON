@@ -38,48 +38,10 @@ JSON *_(Construct)()
   return (JSON*)Map_Construct(BASE(0), TYPEOF (String));
 }
 
-// /******************************************************************************/
-// void STATIC (destruct_any)(void*);
-//
-// /******************************************************************************/
-// void STATIC (destruct_map)(Map *object)
-// {
-//   for (int i = 0; i < object->base.base.size; i++) {
-//     Pair *current = Array_At(&object->base.base, i);
-
-//     JSON_destruct_any(*(void**)current->second.object);
-//   }
-// }
-
-// /******************************************************************************/
-// void STATIC (destruct_array)(Array *object)
-// {
-//   for (int i = 0; i < object->size; i++) {
-//     void *ptr = Array_AtDeref(object, i);
-
-//     JSON_destruct_any(ptr);
-//   }
-// }
-
-// /******************************************************************************/
-// void STATIC (destruct_any)(void *object)
-// {
-//   const Type *type = gettype(object);
-
-//   if (sametype(type, TYPEOF (Array))) {
-//     JSON_destruct_array((Array*)object);
-//   } else if (!sametype(type, TYPEOF (String)) && !sametype(type, TYPEOF (double))) {
-//     JSON_destruct_map((Map*)object);
-//   }
-
-//   DELETE(object);
-// }
-
 ////////////////////////////////////////////////////////////////////////////////
 void _(Destruct)()
 {
   if (this) {
-    JSON_destruct_map(BASE(0));
     Map_Destruct(BASE(0));
   }
 }
@@ -249,9 +211,12 @@ void *STATIC (any)(CharStream *stream)
 ////////////////////////////////////////////////////////////////////////////////
 JSON *_(Deserialize)(CharStream *stream)
 {
-  JSON_Destruct(this);
+  Map *deserialized = JSON_map(stream);
 
-  memcpy(this, JSON_map(stream), sizeof(Map));
+  JSON_Destruct(this);
+  memcpy(this, deserialized, sizeof(Map));
+
+  tfree(deserialized);
   
   return this;
 }

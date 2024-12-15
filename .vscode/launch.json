@@ -9,7 +9,7 @@
       "cwd": "${workspaceFolder}",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/bin/json0.test",
+      "program": "${workspaceFolder}/bin/json.test",
       "stopAtEntry": false,
       "linux": {
         "MIMode": "gdb",
