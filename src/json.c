@@ -92,7 +92,7 @@ double *STATIC (number)(CharStream *stream)
 
   // For now numbers are going to be decimal floating points only
   while ((c = CharStream_Peek(stream)) != EOF) {
-    if ((c >= '0' && c <= '9') || c == '.') {
+    if (c != ',' && c != ']' && c != '}') {
       String_Append(digits, CharStream_Get(stream));
     } else break;
   }
