@@ -243,15 +243,15 @@ void STATIC (write_map)(Map *object, CharStream *stream, int indent)
 {
   CharStream_PutLn(stream, "{");
 
-  for (int i = 0; i < object->base.base.size; i++) {
-    Pair *current = Array_At(&object->base.base, i);
+  for (List *l = &object->base; !List_Empty(l); l = List_Next(l)) {
+    Pair *current = List_Head(l);
 
     JSON_indent(stream, indent + 1);
     JSON_write_text(current->first, stream);
     CharStream_PutStr(stream, " : ");
     JSON_write(current->second, stream, indent + 1);
 
-    if (i < object->base.base.size - 1) {
+    if (!List_Empty(List_Next(l))) {
       CharStream_Put(stream, ',');
     }
 
